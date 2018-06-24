@@ -1,9 +1,0 @@
-{
-  "name":"@rpc/web-worker",
-  "dependencies": {
-    "@js-rpc/core": "1"
-  },
-  "main": "lib/index.js",
-  "scripts": {},
-  "typings": "lib/index.d.dts"
-}

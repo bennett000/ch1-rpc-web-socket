@@ -12,29 +12,8 @@ npm-debug.log
 *~
 *#
 
-# I like tmp folders
-tmp
-
-# I like Web Storm
-.idea/workspace.xml
-
-# libraries are managed by bower
-lib
-
-# build folder
-build
-
 # coverage folder
 coverage
 
 # distribution
-dist
-
-# typings
-typings
-
-# legacy
-legacy/
-
-# docs-generated
-docs-generated
+dist/

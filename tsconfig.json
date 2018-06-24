@@ -2,9 +2,13 @@
   "compileOnSave": false,
   "buildOnSave": false,
   "compilerOptions": {
-    "module": "commonjs",
-    "target": "es6",
-    "strict": true
+    "declaration": true,
+    "module": "es6",
+    "moduleResolution": "node",
+    "outDir": "dist/",
+    "sourceMap": true,
+    "strict": false,
+    "target": "es6"
   },
-  "exclude": ["coverage", "dist", "lib", "node_modules"]
+  "exclude": ["**/*.spec.ts"]
 }
