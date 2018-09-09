@@ -1,6 +1,6 @@
 {
-  "name": "@ch1/rpc",
-  "description": "JavaScript Remote Procedure Call (RPC)",
+  "name": "@ch1/rpc-web-socket",
+  "description": "JavaScript Remote Procedure Call (RPC) - Web Socket Adapter",
   "keywords": [
     "rpc",
     "remote",
@@ -13,7 +13,7 @@
     "webworker",
     "postMessage"
   ],
-  "version": "1.0.4",
+  "version": "1.0.0",
   "author": {
     "name": "Michael J. Bennett",
     "email": "dev@michaeljbennett.info",
@@ -24,11 +24,11 @@
   "private": false,
   "repository": {
     "type": "git",
-    "url": "https://github.com/bennett000/ch1-rpc"
+    "url": "https://github.com/bennett000/ch1-rpc-web-socket"
   },
-  "homepage": "https://github.com/bennett000/ch1-rpc",
+  "homepage": "https://github.com/bennett000/ch1-rpc-web-socket",
   "bugs": {
-    "url": "https://github.com/bennett000/ch1-rpc/issues"
+    "url": "https://github.com/bennett000/ch1-rpc-web-socket/issues"
   },
   "engines": {
     "node": ">=4.0.0"
@@ -37,24 +37,29 @@
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "prebuild": "rimraf ./dist",
+    "prebuild": "yarn clean",
     "build": "tsc",
+    "clean": "rimraf ./intermediate && rimraf ./dist",
     "precommit": "lint-staged",
-    "pretest": "rimraf coverage/ && rimraf ./dist",
-    "test": "jest",
-    "test:debug": "node --inspect-brk node_modules/.bin/jest --runInBand",
-    "test:watch": "jest --watch"
+    "pretest": "rimraf coverage && yarn build && rollup -c",
+    "test": "./test.js"
   },
   "devDependencies": {
-    "@types/jest": "^23.1.1",
     "@types/node": "^10.3.5",
+    "@types/ws": "^6.0.1",
     "husky": "^0.14.3",
-    "jest": "^23.1.0",
+    "jasmine-core": "^3.1.0",
+    "karma": "^2.0.4",
+    "karma-chrome-launcher": "^2.2.0",
+    "karma-jasmine": "^1.1.2",
     "lint-staged": "^7.2.0",
     "prettier": "^1.13.5",
-    "rimraf": "^2.6.2",
-    "ts-jest": "^22.4.6",
-    "typescript": "^3.0.3"
+    "rimraf": "^2.5.2",
+    "rollup": "^0.65.2",
+    "rollup-plugin-node-resolve": "^3.4.0",
+    "typescript": "^3.0.3",
+    "ws": "^6.0.0",
+    "yarn": "^1.9.4"
   },
   "lint-staged": {
     "*.{ts,js,json,css,md}": [
@@ -70,8 +75,7 @@
       "!**/coverage/**",
       "!**/dist/**",
       "!**/*.d.ts",
-      "!**/interfaces.ts",
-      "!**/index.ts"
+      "!**/interfaces.ts"
     ],
     "coverageDirectory": "coverage/",
     "coveragePathIgnorePatterns": [
@@ -100,6 +104,9 @@
     "transform": {
       "^.+\\.tsx?$": "ts-jest"
     },
+    "transformIgnorePatterns": [
+      "^node_modules/(?!@ch1).*$"
+    ],
     "testRegex": "(/__tests__/.*|(\\.|/)(test|spec))\\.(jsx?|tsx?)$",
     "moduleFileExtensions": [
       "ts",
@@ -111,6 +118,7 @@
     ]
   },
   "dependencies": {
-    "@ch1/rpc": "^1.0.3"
+    "@ch1/rpc": "^1.0.4",
+    "@ch1/utility": "^0.5.1"
   }
 }

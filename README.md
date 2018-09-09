@@ -10,74 +10,45 @@ _This library ships only es6 modules with \*.d.ts files, beware_
 
 ## Installation
 
-`yarn add @ch1/rpc`
+`yarn add @ch1/rpc-worker`
+
+### Dependencies
+
+This library has an external run time dependency for the server side portion,
+which leverages the [excellent ws](https://github.com/websockets/ws 'Node WebSocket Library') library.
 
 ## Usage
 
-Process A
+_Warning, no error handling is implemented on the sockets yet, that will come in the next release_
 
-```js
-const b = rpc.create({ /* config */}, {
-  sayOnA: (arg) => console.log(`Process B says ${arg}`);
+Slightly easier API than in the raw [`@ch1/rpc`](https://github.com/bennett000/ch1-rpc 'CH1 RPC')
+
+Client JS Script (using the function foo on the server)
+
+```ts
+const ws = new WebSocket('ws://localhost:8080');
+const rpc = wrpc.create({ socket: ws });
+
+rpc.ready.then(() => rpc.remote.foo()).then(result => {
+  expect(result).toBe(7);
 });
-
-remote.ready().then(() => b.remote.sayOnB('hello world');
-// will call sayOnB on process B
 ```
 
-Process B
+Server JS (sharing the function foo to the client)
 
-```js
-const a = rpc.create({ /* config */}, {
-  sayOnB: (arg) => console.log(`Process A says ${arg}`);
+```ts
+const WebSocket = require('ws');
+const wrpc = require('@ch1/rpc-web-socket');
+const wss = new WebSocket.Server({ port: 8080 });
+
+wss.on('connection', ws => {
+  wrpc.create(
+    { socket: ws },
+    {
+      foo: () => new Promise(resolve => resolve(7)),
+    },
+  );
 });
-
-remote.ready().then(() => a.remote.sayOnA('hello world');
-// will call sayOnA on process A
-```
-
-## How It Works
-
-@ch1/rpc can work across any transport provided that the transport can be
-simplified into `on` and `emit` functions.
-
-What do we mean by `on` and `emit` functions? Let's imagine for a moment the
-[Web Worker API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Using_web_workers 'MDN: Using Web Workers')
-
-_note: @ch1/rpc-worker contains convenience functions that provide WebWorker support out
-of the box. The examples here are educational and *do not* need to be
-implemented_
-
-In our first process we might have a Web Worker:
-
-```js
-// make a new worker
-const myWorker = new Worker("worker.js");
-
-// js-rpc only wants/needs to use the first parameter of emit consequently the
-// WebWorker post message can be used out of the box
-const emit = myWorker.postMessage.bind(myWorker);
-
-// js-rpc's on message wants/needs data to be its first parameter.  Since
-// WebWorker.onmessage boxes passed data into an even we need to extract it
-const on = myWorker.onmessage((event) => event.data);
-
-// make a RPC Object:
-const worker = ({ on, emit }, /* object to expose on worker process */);
-```
-
-In our second WebWorker process we have a slightly different API:
-
-```js
-// WebWorkers use a variable called "self" to register their messages:
-// self.postMessage has the same api as in our previous example
-const emit = self.postMessage.bind(self);
-
-// self.onmessage also boxes data into events
-const on = self.onmessage((event) => event.data);
-
-// make a RPC Object:
-const self = ({ on, emit }, /* object to expose on window process */);
 ```
 
 ## License
