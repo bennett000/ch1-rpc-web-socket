@@ -1,6 +1,6 @@
 # CH1 RPC
 
-[![CircleCI](https://circleci.com/gh/bennett000/ch1-rpc.svg?style=svg)](https://circleci.com/gh/bennett000/ch1-rpc)
+[![CircleCI](https://circleci.com/gh/bennett000/ch1-rpc-web-socket.svg?style=svg)](https://circleci.com/gh/bennett000/ch1-rpc-web-socket)
 
 _This is not well maintained_
 
