@@ -19,5 +19,22 @@ describe('web socket rpc functions', () => {
         })
         .catch(done);
     });
+
+    it('should destroy if the socket closes', done => {
+      const ws = new WebSocket('ws://localhost:5151');
+      const rpc = wrpc.create({ socket: ws });
+      ws.addEventListener('error', done);
+
+      rpc.onDestroy(reason => {
+        expect(reason).toMatch(/^.*close.*$/);
+        done();
+      });
+
+      rpc.ready
+        .then(() => {
+          ws.close();
+        })
+        .catch(done);
+    });
   });
 });

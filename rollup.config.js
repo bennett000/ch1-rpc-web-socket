@@ -6,6 +6,7 @@ export default [
     output: {
       file: 'intermediate/test.js',
       format: 'iife',
+      sourcemap: true,
     },
     plugins: [nodeResolve({ jsnext: true })],
   },
@@ -14,6 +15,7 @@ export default [
     output: {
       file: 'intermediate/rpc-web-socket.js',
       format: 'cjs',
+      sourcemap: true,
     },
     plugins: [nodeResolve({ jsnext: true })],
   },

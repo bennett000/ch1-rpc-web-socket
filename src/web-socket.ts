@@ -17,24 +17,47 @@ import {
   RPCConfig,
 } from '@ch1/rpc';
 
-export type WebSocketType = {
-  on: (message: string, callback: (data: string) => void) => void;
-  send: (data: string) => void;
+export type NativeWebSocket = {
+  addEventListener: (
+    message: string,
+    handler: (result: { data: any }) => any,
+  ) => any;
+  send: (data: string) => any;
+};
+
+export type WsWebSocket = {
+  on: (message: string, callback: (data: any) => any) => any;
+  send: (data: string) => any;
 };
 
 /**
  * Socket RPC Config
  */
 export interface RPCSocketConfig extends RPCAbstractConfig {
-  socket?:
-    | WebSocketType
-    | {
-        addEventListener: (
-          message: string,
-          callback: (data: any) => void,
-        ) => void;
-        send: (data: any) => void;
-      };
+  pingDelay?: number;
+  socket: NativeWebSocket | WsWebSocket;
+}
+
+function configureNativeSocketOnMethod(config: any) {
+  config.on = (callback: (data: any) => any) => {
+    const handler = (data: any) => {
+      callback(JSON.parse(data.data));
+    };
+    config.socket.addEventListener('message', handler);
+
+    return () => config.socket.removeEventListener('message', handler);
+  };
+}
+
+function configureWsSocketOnMethod(config: any) {
+  config.on = (callback: (data: any) => any) => {
+    const handler = (data: any) => {
+      callback(JSON.parse(data));
+    };
+    config.socket.on('message', handler);
+
+    return () => config.socket.removeEventListener('message', handler);
+  };
 }
 
 function configureOnEmit(config: any) {
@@ -46,23 +69,9 @@ function configureOnEmit(config: any) {
     if (typeof config.socket.addEventListener !== 'function') {
       throw new TypeError('rpc-web-socket: socket must have an on method');
     }
-    config.on = (callback: (data: any) => any) => {
-      const handler = (data: any) => {
-        callback(JSON.parse(data.data));
-      };
-      config.socket.addEventListener('message', handler);
-
-      return () => config.socket.removeEventListener('message', handler);
-    };
+    configureNativeSocketOnMethod(config);
   } else {
-    config.on = (callback: (data: any) => any) => {
-      const handler = (data: any) => {
-        callback(JSON.parse(data));
-      };
-      config.socket.on('message', handler);
-
-      return () => config.socket.removeEventListener('message', handler);
-    };
+    configureWsSocketOnMethod(config);
   }
 
   if (typeof config.socket.send !== 'function') {
@@ -74,35 +83,120 @@ function configureOnEmit(config: any) {
   };
 }
 
-export function create<T>(
-  config: RPCSocketConfig = {},
+function configureNativeSocket<RemoteConfig>(
+  config: any,
+  remote: Remote<any>,
+  remoteDesc: RemoteDesc,
+) {
+  let resolve;
+  let reject;
+  let rpc;
+  const earlyDestroys = [];
+  const expose = {
+    onDestroy: (...args: any[]) => {
+      let destroyed = false;
+      const destroy = (reason?: string) => {
+        destroyed = true;
+        desc.onDestroy(reason);
+      };
+
+      const desc = {
+        isValid: () => {
+          if (destroyed) {
+            return false;
+          } else {
+            return true;
+          }
+        },
+        args,
+        onDestroy: reason => {},
+      };
+
+      earlyDestroys.push(desc);
+
+      return destroy;
+    },
+    ready: new Promise((res, rej) => {
+      resolve = res;
+      reject = rej;
+    }),
+  };
+  // @todo awkard... this will need a refactor
+  (config.socket as any).addEventListener('close', () => {
+    if (rpc) {
+      rpc.destroy('rpc: web-socket closed');
+    } else {
+      console.warn('rpc: web-socket error: rpc still not defined (close)');
+    }
+  });
+  // @todo awkard... this will need a refactor
+  (config.socket as any).addEventListener('error', error => {
+    if (rpc) {
+      rpc.destroy('rpc: web-socket error: native: ' + error.message);
+    } else {
+      console.warn('rpc: web-socket error: rpc still not defined (error)');
+    }
+  });
+  (config.socket as any).addEventListener('open', () => {
+    rpc = createRemote<RemoteConfig>(<RPCConfig>config, remote, remoteDesc);
+    earlyDestroys.forEach(desc => {
+      if (desc.isValid()) {
+        desc.onDestroy = rpc.onDestroy(...desc.args);
+      }
+    });
+    rpc.ready
+      .then(() => {
+        Object.keys(rpc).forEach(key => {
+          expose[key] = rpc[key];
+        });
+        resolve();
+      })
+      .catch(reject);
+  });
+  return expose;
+}
+
+function configureWsSocket<RemoteConfig>(
+  config: any,
+  remote: Remote<any>,
+  remoteDesc: RemoteDesc,
+) {
+  const rpc = createRemote<RemoteConfig>(
+    <RPCConfig>config,
+    remote,
+    remoteDesc,
+  );
+  const interval = setInterval(() => {
+    if (config.socket.isAlive === false) {
+      config.socket.terminate();
+    }
+    config.socket.isAlive = false;
+    config.socket.ping();
+  }, config.pingDelay || 10000);
+
+  config.socket.isAlive = true;
+  config.socket.on('pong', () => (config.socket.isAlive = true));
+
+  const destroy = rpc.destroy;
+
+  rpc.destroy = () => {
+    clearInterval(interval);
+    return destroy();
+  };
+
+  return rpc;
+}
+
+export function create<RemoteType>(
+  config: RPCSocketConfig,
   remote?: Remote<any>,
   remoteDesc?: RemoteDesc,
 ) {
   configureOnEmit(config);
 
   if (typeof WebSocket !== 'undefined') {
-    let resolve;
-    let reject;
-    const expose = {
-      ready: new Promise((res, rej) => {
-        resolve = res;
-        reject = rej;
-      }),
-    };
-    (config.socket as any).addEventListener('open', () => {
-      const rpc = createRemote<T>(<RPCConfig>config, remote, remoteDesc);
-      rpc.ready
-        .then(() => {
-          Object.keys(rpc).forEach(key => {
-            expose[key] = rpc[key];
-          });
-          resolve();
-        })
-        .catch(reject);
-    });
-    return expose;
+    return configureNativeSocket<RemoteType>(config, remote, remoteDesc);
   } else {
-    return createRemote<T>(<RPCConfig>config, remote, remoteDesc);
+    return configureWsSocket<RemoteType>(config, remote, remoteDesc);
   }
 }
