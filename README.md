@@ -6,8 +6,6 @@ _This is not well maintained_
 
 _This is not traditional RPC, but it is like it_
 
-_This library ships only es6 modules with \*.d.ts files, beware_
-
 ## Installation
 
 `yarn add @ch1/rpc-worker`

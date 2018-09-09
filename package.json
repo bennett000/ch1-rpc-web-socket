@@ -13,7 +13,7 @@
     "webworker",
     "postMessage"
   ],
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": {
     "name": "Michael J. Bennett",
     "email": "dev@michaeljbennett.info",
@@ -33,12 +33,13 @@
   "engines": {
     "node": ">=4.0.0"
   },
-  "main": "dist/index.js",
+  "main": "dist/index.cjs.js",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "prebuild": "yarn clean",
     "build": "tsc",
+    "postbuild": "rollup --input dist/index.js --format cjs --file dist/index.cjs.js",
     "clean": "rimraf ./intermediate && rimraf ./dist",
     "precommit": "lint-staged",
     "pretest": "rimraf coverage && yarn build && rollup -c",
